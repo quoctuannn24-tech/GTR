@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minh họa Trực quan Giá trị riêng & Vector riêng</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MathJax for rendering math dynamic formulas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
+    <!-- Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        canvas {
+            touch-action: none;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+        .math-box p {
+            margin-bottom: 0.25rem;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col md:flex-row overflow-hidden">
+
+    <!-- CANVAS INTERACTIVE DISPLAY (LEFT / TOP) -->
+    <div class="relative flex-1 bg-slate-950 flex flex-col items-center justify-center p-4 overflow-hidden select-none">
+        <!-- Canvas Header Overlay -->
+        <div class="absolute top-4 left-4 z-10 bg-slate-900/80 backdrop-blur border border-slate-700/60 p-3 rounded-xl shadow-lg max-w-xs sm:max-w-md">
+            <h1 class="text-lg font-bold text-cyan-400 flex items-center gap-2">
+                <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                Biến đổi Tuyến tính 2D
+            </h1>
+            <p class="text-xs text-slate-300 mt-1">
+                Kéo thả vector màu cam <span class="text-amber-400 font-bold">v</span> để kiểm tra hướng biến đổi <span class="text-rose-400 font-bold">A·v</span>. Khi trùng đường vector riêng, 2 vector sẽ <span class="underline decoration-emerald-400">thẳng hàng</span>!
+            </p>
+        </div>
+
+        <!-- Canvas Floating Controls -->
+        <div class="absolute top-4 right-4 z-10 flex flex-col gap-2">
+            <button id="btnResetView" class="bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 px-3 py-2 rounded-lg border border-slate-700 transition shadow flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Đặt lại Góc nhìn
+            </button>
+            <button id="btnPresetDefault" class="bg-indigo-600/80 hover:bg-indigo-600 text-xs text-white px-3 py-2 rounded-lg border border-indigo-500/50 transition shadow font-medium">
+                Ma trận Mẫu [[2,3],[3,2]]
+            </button>
+        </div>
+
+        <!-- The Canvas -->
+        <canvas id="gridCanvas" class="w-full h-full cursor-crosshair rounded-xl"></canvas>
+
+        <!-- Legend Overlay at bottom left -->
+        <div class="absolute bottom-4 left-4 z-10 bg-slate-900/90 backdrop-blur border border-slate-800 p-3 rounded-xl text-xs flex flex-wrap gap-x-4 gap-y-2 shadow-xl">
+            <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-sm bg-blue-500/30 border border-blue-400 inline-block"></span>
+                <span>Hình vuông gốc</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-sm bg-rose-500/40 border border-rose-500 inline-block"></span>
+                <span>Hình sau biến đổi</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <span class="w-4 h-0.5 bg-emerald-400 inline-block"></span>
+                <span class="text-emerald-400 font-semibold">Vector riêng v₁</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <span class="w-4 h-0.5 bg-yellow-400 inline-block"></span>
+                <span class="text-yellow-400 font-semibold">Vector riêng v₂</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <span class="w-4 h-0.5 bg-amber-400 inline-block"></span>
+                <span>Vector v (Thử nghiệm)</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <span class="w-4 h-0.5 bg-pink-500 inline-block"></span>
+                <span>Vector Av (Biến đổi)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTROL PANEL & MATHEMATICAL THEORY (RIGHT / BOTTOM) -->
+    <div class="w-full md:w-[450px] lg:w-[480px] bg-slate-900 border-t md:border-t-0 md:border-l border-slate-800 flex flex-col h-full z-20">
+        
+        <!-- Header -->
+        <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+                Bảng Điều Khiển & Đại Số
+            </h2>
+            <span class="text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded-full font-medium">Toán Học Trực Quan</span>
+        </div>
+
+        <!-- Scrollable Content -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-5">
+
+            <!-- 1. TRANSFORMATION MATRIX INPUT -->
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4">
+                <div class="flex justify-between items-center mb-3">
+                    <label class="text-xs font-semibold uppercase tracking-wider text-slate-400">Ma Trận Phép Biến Đổi A</label>
+                    <span class="text-xs text-slate-400">Hệ số 2x2</span>
+                </div>
+                <div class="flex items-center justify-center gap-4">
+                    <span class="text-3xl font-light text-slate-400">[</span>
+                    <div class="grid grid-cols-2 gap-3 max-w-[180px]">
+                        <div>
+                            <span class="text-[10px] text-slate-400 block mb-0.5">a₁₁</span>
+                            <input type="number" step="0.5" id="m11" value="2" class="w-full bg-slate-900 border border-slate-700 text-center text-emerald-400 font-mono font-bold rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block mb-0.5">a₁₂</span>
+                            <input type="number" step="0.5" id="m12" value="3" class="w-full bg-slate-900 border border-slate-700 text-center text-emerald-400 font-mono font-bold rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block mb-0.5">a₂₁</span>
+                            <input type="number" step="0.5" id="m21" value="3" class="w-full bg-slate-900 border border-slate-700 text-center text-emerald-400 font-mono font-bold rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block mb-0.5">a₂₂</span>
+                            <input type="number" step="0.5" id="m22" value="2" class="w-full bg-slate-900 border border-slate-700 text-center text-emerald-400 font-mono font-bold rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+                    </div>
+                    <span class="text-3xl font-light text-slate-400">]</span>
+                </div>
+            </div>
+
+            <!-- 2. INTERPOLATION SLIDER (TRANSFORMATION PROGRESS) -->
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 space-y-2">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="font-semibold uppercase tracking-wider text-slate-400">Tiến Trình Biến Đổi (t)</span>
+                    <span id="tValDisplay" class="font-mono text-cyan-400 font-bold bg-slate-900 px-2 py-0.5 rounded border border-slate-700">t = 1.00</span>
+                </div>
+                <input type="range" id="tSlider" min="0" max="1" step="0.01" value="1" class="w-full accent-cyan-400 bg-slate-700 h-2 rounded-lg cursor-pointer">
+                <div class="flex justify-between text-[11px] text-slate-400 font-mono">
+                    <span>t=0 (Ma trận Đơn vị I)</span>
+                    <span>t=1 (Ma trận A)</span>
+                </div>
+                <div class="pt-2 flex gap-2">
+                    <button id="btnAnimate" class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white text-xs py-2 rounded-lg font-medium transition shadow flex justify-center items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Phát Chuyển Động
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. TOGGLES & DISPLAY OPTIONS -->
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 space-y-3">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-1">Tùy Chọn Hiển Thị</span>
+                
+                <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer hover:text-white">
+                    <span class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                        Hiển thị Đường Vector Riêng (Eigenvectors)
+                    </span>
+                    <input type="checkbox" id="chkShowEigen" checked class="accent-emerald-500 w-4 h-4 rounded">
+                </label>
+                
+                <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer hover:text-white">
+                    <span class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                        Hiển thị Vector Thử Nghiệm v & A·v
+                    </span>
+                    <input type="checkbox" id="chkShowArbitrary" checked class="accent-amber-500 w-4 h-4 rounded">
+                </label>
+
+                <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer hover:text-white">
+                    <span class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
+                        Hiển thị Lưới Tọa Độ Biến Dạng (Grid Warp)
+                    </span>
+                    <input type="checkbox" id="chkShowGrid" checked class="accent-blue-500 w-4 h-4 rounded">
+                </label>
+            </div>
+
+            <!-- 4. COMPUTED EIGENVALUES & EIGENVECTORS -->
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 space-y-3">
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Kết Quả Tính Toán Đại Số</h3>
+                
+                <!-- Characteristic Equation -->
+                <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700/50 text-xs font-mono text-slate-300 overflow-x-auto">
+                    <div id="charEqMath" class="text-cyan-300">Đang tính toán...</div>
+                </div>
+
+                <!-- Eigenvalues & Vectors summary cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <!-- λ1 Card -->
+                    <div class="bg-slate-900/90 p-3 rounded-lg border border-emerald-500/40 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-2 h-full bg-emerald-500"></div>
+                        <div class="font-bold text-emerald-400 text-sm mb-1" id="eigenVal1Text">λ₁ = 5</div>
+                        <div class="text-slate-300 font-mono" id="eigenVec1Text">v₁ = [1, 1]</div>
+                        <div class="text-[11px] text-slate-400 mt-1 italic" id="eigenDesc1">Giãn gấp 5 lần</div>
+                    </div>
+
+                    <!-- λ2 Card -->
+                    <div class="bg-slate-900/90 p-3 rounded-lg border border-yellow-500/40 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-2 h-full bg-yellow-400"></div>
+                        <div class="font-bold text-yellow-400 text-sm mb-1" id="eigenVal2Text">λ₂ = -1</div>
+                        <div class="text-slate-300 font-mono" id="eigenVec2Text">v₂ = [-1, 1]</div>
+                        <div class="text-[11px] text-slate-400 mt-1 italic" id="eigenDesc2">Đảo chiều (độ dài giữ nguyên)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. PEDAGOGICAL THEORY EXPLANATION -->
+            <div class="bg-indigo-950/40 border border-indigo-800/50 rounded-xl p-4 space-y-2 text-xs leading-relaxed text-slate-300">
+                <h4 class="font-bold text-indigo-300 flex items-center gap-1.5">
+                    <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                    Bản chất Hình học của Eigenvalue & Eigenvector
+                </h4>
+                <p>
+                    • <strong class="text-emerald-400">Vector riêng (Eigenvector $\vec{v}$):</strong> Là đường hướng không thay đổi phương khi chịu phép biến đổi ma trận $A$. Thông thường mọi vector đều bị xoay khi nhân với $A$, duy nhất các Vector riêng giữ nguyên đường thẳng phương của nó ($A\vec{v}$ cùng phương với $\vec{v}$).
+                </p>
+                <p>
+                    • <strong class="text-yellow-400">Giá trị riêng (Eigenvalue $\lambda$):</strong> Là hệ số tỉ lệ co giãn trên chính hướng vector riêng đó ($A\vec{v} = \lambda\vec{v}$).
+                </p>
+                <ul class="list-disc list-inside space-y-1 text-slate-400 pl-1">
+                    <li><span class="text-slate-200">$\lambda > 1$:</span> Phóng đại / Giãn dài ra.</li>
+                    <li><span class="text-slate-200">$0 < \lambda < 1$:</span> Thu nhỏ / Thu hẹp lại.</li>
+                    <li><span class="text-slate-200 font-medium">$\lambda < 0$:</span> Bị lật ngược đảo chiều (và phóng đại theo $|\lambda|$).</li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MAIN JAVASCRIPT LOGIC -->
+    <script>
+        // --- STATE MANAGEMENT ---
+        const state = {
+            // Matrix A = [[a, b], [c, d]]
+            matrix: { a: 2, b: 3, c: 3, d: 2 },
+            t: 1.0, // Interpolation factor [0, 1]
+            showEigen: true,
+            showArbitrary: true,
+            showGrid: true,
+            // Arbitrary vector v (angle in radians, length)
+            vectorV: { x: 1.5, y: 0.5 },
+            isDraggingVector: false,
+            // Viewport & Pan/Zoom
+            zoom: 65, // pixels per grid unit
+            pan: { x: 0, y: 0 },
+            isPanning: false,
+            startPan: { x: 0, y: 0 },
+            // Animation
+            animating: false,
+            animId: null
+        };
+
+        // --- CANVAS SETUP ---
+        const canvas = document.getElementById('gridCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            draw();
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // --- MATH HELPERS ---
+        function computeEigen() {
+            const { a, b, c, d } = state.matrix;
+            // Characteristic Polynomial: λ^2 - (a+d)λ + (ad - bc) = 0
+            const trace = a + d;
+            const det = a * d - b * c;
+            const delta = trace * trace - 4 * det;
+
+            if (delta < 0) {
+                return {
+                    real: false,
+                    trace, det,
+                    l1: null, l2: null,
+                    v1: null, v2: null
+                };
+            }
+
+            const sqrtD = Math.sqrt(delta);
+            const l1 = (trace + sqrtD) / 2;
+            const l2 = (trace - sqrtD) / 2;
+
+            // Compute eigenvectors: (A - λI)v = 0 => (a-λ)x + by = 0
+            function getEigenVector(lambda) {
+                const row1_x = a - lambda;
+                const row1_y = b;
+                const row2_x = c;
+                const row2_y = d - lambda;
+
+                // Try solving from first row
+                if (Math.abs(row1_y) > 1e-6) {
+                    return normalize({ x: 1, y: -row1_x / row1_y });
+                } else if (Math.abs(row1_x) > 1e-6) {
+                    return normalize({ x: -row1_y / row1_x, y: 1 });
+                }
+                // Try second row if first fails
+                if (Math.abs(row2_y) > 1e-6) {
+                    return normalize({ x: 1, y: -row2_x / row2_y });
+                } else if (Math.abs(row2_x) > 1e-6) {
+                    return normalize({ x: -row2_y / row2_x, y: 1 });
+                }
+                return { x: 1, y: 0 };
+            }
+
+            return {
+                real: true,
+                trace, det, delta,
+                l1, l2,
+                v1: getEigenVector(l1),
+                v2: getEigenVector(l2)
+            };
+        }
+
+        function normalize(v) {
+            const len = Math.hypot(v.x, v.y);
+            if (len < 1e-9) return { x: 1, y: 0 };
+            return { x: v.x / len, y: v.y / len };
+        }
+
+        // Interpolated Matrix T(t) = (1-t)*I + t*A
+        function getInterpolatedMatrix() {
+            const t = state.t;
+            const { a, b, c, d } = state.matrix;
+            return {
+                a: (1 - t) * 1 + t * a,
+                b: (1 - t) * 0 + t * b,
+                c: (1 - t) * 0 + t * c,
+                d: (1 - t) * 1 + t * d
+            };
+        }
+
+        // Apply 2x2 matrix to vector
+        function transform(m, v) {
+            return {
+                x: m.a * v.x + m.b * v.y,
+                y: m.c * v.x + m.d * v.y
+            };
+        }
+
+        // --- COORDINATE CONVERSION ---
+        function toScreen(x, y) {
+            const cx = canvas.width / 2 + state.pan.x;
+            const cy = canvas.height / 2 + state.pan.y;
+            return {
+                x: cx + x * state.zoom,
+                y: cy - y * state.zoom // Flip Y for Math coordinates
+            };
+        }
+
+        function toMath(sx, sy) {
+            const cx = canvas.width / 2 + state.pan.x;
+            const cy = canvas.height / 2 + state.pan.y;
+            return {
+                x: (sx - cx) / state.zoom,
+                y: (cy - sy) / state.zoom
+            };
+        }
+
+        // --- RENDERING ROUTINES ---
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const m = getInterpolatedMatrix();
+            const eigen = computeEigen();
+
+            // 1. Draw Grid Lines
+            drawGrid(m);
+
+            // 2. Draw Transformed Unit Square (The central shape)
+            drawSquare(m);
+
+            // 3. Draw Eigenvector Lines
+            if (state.showEigen && eigen.real) {
+                drawEigenLines(eigen);
+            }
+
+            // 4. Draw Arbitrary Vector v & A*v
+            if (state.showArbitrary) {
+                drawArbitraryVectors(m);
+            }
+
+            // 5. Render Center Axis Origin Dot
+            const origin = toScreen(0, 0);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(origin.x, origin.y, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawGrid(m) {
+            const bounds = Math.max(10, Math.ceil(canvas.width / state.zoom));
+
+            // Background subtle grid lines
+            ctx.lineWidth = 1;
+
+            for (let i = -bounds; i <= bounds; i++) {
+                if (i === 0) continue; // Skip main axes for now
+
+                // Transformed horizontal grid lines
+                if (state.showGrid) {
+                    ctx.strokeStyle = 'rgba(51, 65, 85, 0.4)';
+                    ctx.beginPath();
+                    let pStart = transform(m, { x: -bounds, y: i });
+                    let pEnd = transform(m, { x: bounds, y: i });
+                    let sStart = toScreen(pStart.x, pStart.y);
+                    let sEnd = toScreen(pEnd.x, pEnd.y);
+                    ctx.moveTo(sStart.x, sStart.y);
+                    ctx.lineTo(sEnd.x, sEnd.y);
+                    ctx.stroke();
+
+                    // Transformed vertical grid lines
+                    ctx.beginPath();
+                    pStart = transform(m, { x: i, y: -bounds });
+                    pEnd = transform(m, { x: i, y: bounds });
+                    sStart = toScreen(pStart.x, pStart.y);
+                    sEnd = toScreen(pEnd.x, pEnd.y);
+                    ctx.moveTo(sStart.x, sStart.y);
+                    ctx.lineTo(sEnd.x, sEnd.y);
+                    ctx.stroke();
+                }
+
+                // Static background subtle coordinate ticks
+                ctx.strokeStyle = 'rgba(30, 41, 59, 0.5)';
+                ctx.beginPath();
+                let s1 = toScreen(-bounds, i);
+                let s2 = toScreen(bounds, i);
+                ctx.moveTo(s1.x, s1.y); ctx.lineTo(s2.x, s2.y);
+                s1 = toScreen(i, -bounds);
+                s2 = toScreen(i, bounds);
+                ctx.moveTo(s1.x, s1.y); ctx.lineTo(s2.x, s2.y);
+                ctx.stroke();
+            }
+
+            // Main Cartesian Axes X and Y
+            const orig = toScreen(0, 0);
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+            ctx.lineWidth = 1.5;
+
+            // X Axis
+            ctx.beginPath();
+            ctx.moveTo(0, orig.y);
+            ctx.lineTo(canvas.width, orig.y);
+            ctx.stroke();
+
+            // Y Axis
+            ctx.beginPath();
+            ctx.moveTo(orig.x, 0);
+            ctx.lineTo(orig.x, canvas.height);
+            ctx.stroke();
+        }
+
+        function drawSquare(m) {
+            // Unit square defined by corners: (-1,-1), (1,-1), (1,1), (-1,1)
+            const squarePts = [
+                { x: -1, y: -1 },
+                { x: 1, y: -1 },
+                { x: 1, y: 1 },
+                { x: -1, y: 1 }
+            ];
+
+            // 1. Original Square (Dotted Blue)
+            ctx.save();
+            ctx.strokeStyle = '#3b82f6';
+            ctx.fillStyle = 'rgba(59, 130, 246, 0.08)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            squarePts.forEach((pt, idx) => {
+                const s = toScreen(pt.x, pt.y);
+                if (idx === 0) ctx.moveTo(s.x, s.y);
+                else ctx.lineTo(s.x, s.y);
+            });
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+
+            // 2. Transformed Polygon (Solid Rose / Red Accent)
+            const transformedPts = squarePts.map(pt => transform(m, pt));
+            ctx.save();
+            ctx.strokeStyle = '#f43f5e';
+            ctx.fillStyle = 'rgba(244, 63, 94, 0.25)';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            transformedPts.forEach((pt, idx) => {
+                const s = toScreen(pt.x, pt.y);
+                if (idx === 0) ctx.moveTo(s.x, s.y);
+                else ctx.lineTo(s.x, s.y);
+            });
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawEigenLines(eigen) {
+            const extend = 25; // Extension length on screen grid
+
+            // Helper to draw infinite line along eigenvector
+            const drawLine = (v, color, label, lambdaVal) => {
+                const p1 = toScreen(-v.x * extend, -v.y * extend);
+                const p2 = toScreen(v.x * extend, v.y * extend);
+
+                ctx.save();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([6, 6]);
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
+                ctx.restore();
+
+                // Draw direction arrow tip along eigenvector line
+                const head = toScreen(v.x * 2.5, v.y * 2.5);
+                drawArrowHead(toScreen(0,0), head, color);
+
+                // Label Text
+                ctx.fillStyle = color;
+                ctx.font = 'bold 12px Inter, sans-serif';
+                ctx.fillText(`${label} (λ=${lambdaVal.toFixed(2)})`, head.x + 10, head.y - 10);
+            };
+
+            if (eigen.v1) drawLine(eigen.v1, '#10b981', 'Hướng v₁', eigen.l1);
+            if (eigen.v2) drawLine(eigen.v2, '#facc15', 'Hướng v₂', eigen.l2);
+        }
+
+        function drawArbitraryVectors(m) {
+            const v = state.vectorV;
+            const Av = transform(m, v);
+
+            const orig = toScreen(0, 0);
+            const sV = toScreen(v.x, v.y);
+            const sAv = toScreen(Av.x, Av.y);
+
+            // Vector v (Amber/Orange)
+            drawVector(orig, sV, '#fbbf24', 'v', 3);
+
+            // Vector A*v (Pink/Magenta)
+            drawVector(orig, sAv, '#ec4899', 'T(v) = A·v', 3);
+
+            // Draw interaction handle circle around vector v head
+            ctx.save();
+            ctx.fillStyle = state.isDraggingVector ? '#ffffff' : '#fbbf24';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(sV.x, sV.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+
+            // Check alignment (Collinearity check)
+            const crossProduct = Math.abs(v.x * Av.y - v.y * Av.x);
+            if (crossProduct < 0.1 && Math.hypot(v.x, v.y) > 0.2) {
+                // Flash highlighted circle effect around head indicating collinearity
+                ctx.save();
+                ctx.strokeStyle = '#34d399';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(sV.x, sV.y, 14, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.fillStyle = '#34d399';
+                ctx.font = 'bold 12px Inter, sans-serif';
+                ctx.fillText('✨ THẲNG HÀNG! (Trùng Vector Riêng)', sV.x + 15, sV.y + 20);
+                ctx.restore();
+            }
+        }
+
+        function drawVector(from, to, color, label, lineWidth = 2) {
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = lineWidth;
+
+            // Draw Line
+            ctx.beginPath();
+            ctx.moveTo(from.x, from.y);
+            ctx.lineTo(to.x, to.y);
+            ctx.stroke();
+
+            // Draw Arrow Head
+            drawArrowHead(from, to, color);
+
+            // Label
+            if (label) {
+                ctx.font = 'bold 12px Inter, sans-serif';
+                ctx.fillText(label, to.x + 8, to.y - 8);
+            }
+            ctx.restore();
+        }
+
+        function drawArrowHead(from, to, color) {
+            const headlen = 10;
+            const angle = Math.atan2(to.y - from.y, to.x - from.x);
+            ctx.save();
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(to.x, to.y);
+            ctx.lineTo(to.x - headlen * Math.cos(angle - Math.PI / 6), to.y - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(to.x - headlen * Math.cos(angle + Math.PI / 6), to.y - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // --- UI & MATH UPDATES ---
+        function updateMathUI() {
+            const { a, b, c, d } = state.matrix;
+            const eigen = computeEigen();
+
+            const charEqEl = document.getElementById('charEqMath');
+            const v1ValEl = document.getElementById('eigenVal1Text');
+            const v1VecEl = document.getElementById('eigenVec1Text');
+            const v1DescEl = document.getElementById('eigenDesc1');
+
+            const v2ValEl = document.getElementById('eigenVal2Text');
+            const v2VecEl = document.getElementById('eigenVec2Text');
+            const v2DescEl = document.getElementById('eigenDesc2');
+
+            // Render LaTeX characteristic equation dynamically
+            const trace = a + d;
+            const det = a * d - b * c;
+            const traceStr = trace >= 0 ? `- ${trace}` : `+ ${Math.abs(trace)}`;
+            const detStr = det >= 0 ? `+ ${det}` : `- ${Math.abs(det)}`;
+
+            charEqEl.innerHTML = `\\det(A - \\lambda I) = \\lambda^2 ${traceStr}\\lambda ${detStr} = 0`;
+            
+            if (window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetPromise([charEqEl]).catch(err => console.log(err));
+            }
+
+            if (!eigen.real) {
+                v1ValEl.textContent = "λ₁ = Thức phức (Complex)";
+                v1VecEl.textContent = "Không có vector riêng thực";
+                v1DescEl.textContent = "Phép biến đổi chứa thành phần xoay thuần túy";
+
+                v2ValEl.textContent = "λ₂ = Thức phức (Complex)";
+                v2VecEl.textContent = "Không có vector riêng thực";
+                v2DescEl.textContent = "";
+                return;
+            }
+
+            // Real Eigenvalues
+            const l1 = eigen.l1;
+            const l2 = eigen.l2;
+            const v1 = eigen.v1;
+            const v2 = eigen.v2;
+
+            v1ValEl.textContent = `λ₁ = ${l1 % 1 === 0 ? l1 : l1.toFixed(2)}`;
+            v1VecEl.textContent = `v₁ = [${v1.x.toFixed(2)}, ${v1.y.toFixed(2)}]`;
+            v1DescEl.textContent = getScaleDescription(l1);
+
+            v2ValEl.textContent = `λ₂ = ${l2 % 1 === 0 ? l2 : l2.toFixed(2)}`;
+            v2VecEl.textContent = `v₂ = [${v2.x.toFixed(2)}, ${v2.y.toFixed(2)}]`;
+            v2DescEl.textContent = getScaleDescription(l2);
+        }
+
+        function getScaleDescription(lambda) {
+            const absL = Math.abs(lambda);
+            let desc = "";
+            if (lambda < 0) desc += "Đảo chiều, ";
+            if (Math.abs(absL - 1) < 1e-4) desc += "giữ nguyên độ dài";
+            else if (absL > 1) desc += `giãn dài gấp ${absL.toFixed(2)} lần`;
+            else desc += `thu nhỏ còn ${absL.toFixed(2)} lần`;
+            return desc;
+        }
+
+        // --- INTERACTION LOGIC ---
+        function setupEventListeners() {
+            // Matrix inputs
+            ['m11', 'm12', 'm21', 'm22'].forEach(id => {
+                document.getElementById(id).addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    if (id === 'm11') state.matrix.a = val;
+                    if (id === 'm12') state.matrix.b = val;
+                    if (id === 'm21') state.matrix.c = val;
+                    if (id === 'm22') state.matrix.d = val;
+                    updateMathUI();
+                    draw();
+                });
+            });
+
+            // Interpolation slider
+            const slider = document.getElementById('tSlider');
+            const sliderDisplay = document.getElementById('tValDisplay');
+            slider.addEventListener('input', (e) => {
+                state.t = parseFloat(e.target.value);
+                sliderDisplay.textContent = `t = ${state.t.toFixed(2)}`;
+                draw();
+            });
+
+            // Toggle checkboxes
+            document.getElementById('chkShowEigen').addEventListener('change', (e) => {
+                state.showEigen = e.target.checked;
+                draw();
+            });
+            document.getElementById('chkShowArbitrary').addEventListener('change', (e) => {
+                state.showArbitrary = e.target.checked;
+                draw();
+            });
+            document.getElementById('chkShowGrid').addEventListener('change', (e) => {
+                state.showGrid = e.target.checked;
+                draw();
+            });
+
+            // Preset default matrix button
+            document.getElementById('btnPresetDefault').addEventListener('click', () => {
+                state.matrix = { a: 2, b: 3, c: 3, d: 2 };
+                document.getElementById('m11').value = 2;
+                document.getElementById('m12').value = 3;
+                document.getElementById('m21').value = 3;
+                document.getElementById('m22').value = 2;
+                updateMathUI();
+                draw();
+            });
+
+            // Reset view button
+            document.getElementById('btnResetView').addEventListener('click', () => {
+                state.pan = { x: 0, y: 0 };
+                state.zoom = 65;
+                draw();
+            });
+
+            // Animation toggle
+            const btnAnimate = document.getElementById('btnAnimate');
+            btnAnimate.addEventListener('click', () => {
+                if (state.animating) {
+                    state.animating = false;
+                    btnAnimate.innerHTML = `
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Phát Chuyển Động
+                    `;
+                    cancelAnimationFrame(state.animId);
+                } else {
+                    state.animating = true;
+                    btnAnimate.innerHTML = `
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Tạm Dừng
+                    `;
+                    let forward = true;
+                    let startTime = null;
+
+                    const step = (timestamp) => {
+                        if (!state.animating) return;
+                        if (!startTime) startTime = timestamp;
+
+                        if (forward) {
+                            state.t += 0.008;
+                            if (state.t >= 1) { state.t = 1; forward = false; }
+                        } else {
+                            state.t -= 0.008;
+                            if (state.t <= 0) { state.t = 0; forward = true; }
+                        }
+
+                        slider.value = state.t;
+                        sliderDisplay.textContent = `t = ${state.t.toFixed(2)}`;
+                        draw();
+                        state.animId = requestAnimationFrame(step);
+                    };
+                    state.animId = requestAnimationFrame(step);
+                }
+            });
+
+            // Canvas Pointer Interactions (Mouse & Touch)
+            const handlePointerDown = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                const mouseX = clientX - rect.left;
+                const mouseY = clientY - rect.top;
+
+                // Check hit test for vector v head
+                const sV = toScreen(state.vectorV.x, state.vectorV.y);
+                const distToV = Math.hypot(mouseX - sV.x, mouseY - sV.y);
+
+                if (distToV < 25 && state.showArbitrary) {
+                    state.isDraggingVector = true;
+                } else {
+                    state.isPanning = true;
+                    state.startPan = { x: mouseX - state.pan.x, y: mouseY - state.pan.y };
+                }
+            };
+
+            const handlePointerMove = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                const mouseX = clientX - rect.left;
+                const mouseY = clientY - rect.top;
+
+                if (state.isDraggingVector) {
+                    const mathPos = toMath(mouseX, mouseY);
+                    state.vectorV = { x: mathPos.x, y: mathPos.y };
+                    draw();
+                } else if (state.isPanning) {
+                    state.pan.x = mouseX - state.startPan.x;
+                    state.pan.y = mouseY - state.startPan.y;
+                    draw();
+                }
+            };
+
+            const handlePointerUp = () => {
+                state.isDraggingVector = false;
+                state.isPanning = false;
+            };
+
+            canvas.addEventListener('mousedown', handlePointerDown);
+            canvas.addEventListener('mousemove', handlePointerMove);
+            window.addEventListener('mouseup', handlePointerUp);
+
+            canvas.addEventListener('touchstart', handlePointerDown, { passive: true });
+            canvas.addEventListener('touchmove', handlePointerMove, { passive: true });
+            window.addEventListener('touchend', handlePointerUp);
+
+            // Canvas Wheel Zoom
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+                state.zoom = Math.max(20, Math.min(200, state.zoom * zoomFactor));
+                draw();
+            }, { passive: false });
+        }
+
+        // --- INIT ---
+        window.onload = () => {
+            resizeCanvas();
+            setupEventListeners();
+            updateMathUI();
+            draw();
+        };
+    </script>
+</body>
+</html>
